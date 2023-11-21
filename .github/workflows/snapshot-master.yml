@@ -12,6 +12,10 @@ on:
       RUBY_PATCH_URL:
         description: Patch URL
         required: false
+      upload-build-artifacts:
+        description: Upload build artifacts
+        type: boolean
+        default: false
 
 jobs:
   make-snapshot:
@@ -311,6 +315,18 @@ jobs:
         run: cd snapshot-*/ && ./configure --with-openssl-dir=$(brew --prefix openssl@1.1) --with-readline-dir=$(brew --prefix readline) --with-libyaml-dir=$(brew --prefix libyaml)
       - name: make
         run: cd snapshot-*/ && make $JOBS
+      - name: Archive build artifacts
+        if: ${{ github.event.inputs.upload-build-artifacts == 'true' }}
+        run: |
+          set -x
+          mkdir -p pkg
+          tar cfJ pkg/$archname.tar.xz snapshot-*/
+      - uses: actions/upload-artifact@v3
+        if: ${{ github.event.inputs.upload-build-artifacts == 'true' }}
+        with:
+          name: build-artifacts-master-${{ matrix.os }}-${{ matrix.test_task }}
+          path: pkg
+
       - name: Tests
         run: cd snapshot-*/ && make $JOBS -s ${{ matrix.test_task }}
         env:
